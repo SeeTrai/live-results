@@ -1,0 +1,81 @@
+﻿<!DOCTYPE html> 
+<html> 
+	<head> 
+	<title>Live Results</title> 
+	<meta name="viewport" content="width=device-width, initial-scale=1"> 
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link rel="apple-touch-startup-image" href="/images/axtime-ios-startup-748x1024.png" media="screen and (min-device-width: 481px) and (max-device-width: 1024px) and (orientation:landscape)">
+    <link rel="apple-touch-startup-image" href="/images/axtime-ios-startup-768x1004-portrait.png" media="screen and (min-device-width: 481px) and (max-device-width: 1024px) and (orientation:portrait)">
+    <link rel="apple-touch-startup-image" href="/images/axtime-ios-startup-320x460.png" media="screen and (max-device-width: 320px)">
+    <link rel="apple-touch-icon" href="/images/axtime-apple-touch-icon-57.png" />
+    <link rel="apple-touch-icon" sizes="72x72" href="/images/axtime-apple-touch-icon-72.png" />
+    <link rel="apple-touch-icon" sizes="114x114" href="/images/axtime-apple-touch-icon-114.png" />
+	<link rel="stylesheet" href="/jquery.mobile.css" />
+    <link href="/style.css" rel="stylesheet" type="text/css" />
+	<script src="/jquery-1.7.1.js"></script>
+	<script src="/jquery.mobile.js"></script>
+    <!--<script src="/script.js"></script>-->
+    <script src="/socket.io/socket.io.js"></script>
+</head> 
+<body> 
+    <div data-role="page">
+        <div data-role="header">
+            <h1>AXti.me Live Results</h1>
+            
+        </div>
+        <div data-role="content">
+           <div class="logo-horiz"></div>
+           <div style="padding:6px;background-color:#ffff99;border:1px solid #cccc00;">The data below is automatically updated when the system gets updated.  No need to do anything!</div>
+           <p id="info"># of Runs: <strong><span id="ttodruncount"></span></strong> -  Last Updated: <strong><span id="ttodlastupdated"></span></strong></p>
+           <!--<p><a href="/results" data-theme="b" data-role="button" data-ajax="false">View Live Results</a></p>-->
+           <h3>Top Times of Day</h3>
+           <div><ul id="ttodresults" data-role="listview" data-divider-theme="e"><li>Loading...</li></ul></div>
+           
+        </div>
+        <div data-role="footer" data-position="fixed" class="custom-icons">
+            <div data-role="navbar" class="custom-icons">
+		        <ul>
+			        <li><a class="nb-carsearch" href="/results#dlg-carsearch" data-ajax="false" data-icon="custom">Car Search</a></li>
+			        <li><a class="nb-results" href="/results" data-ajax="false" data-icon="custom">Results</a></li>
+			        <li><a class="nb-runs" href="/runs" data-ajax="false" data-icon="custom">Runs</a></li>
+		        </ul>
+	        </div>
+        </div>
+        
+    <script type="text/javascript">
+        var lastpoll = 'na', totalruns = 0;
+
+        function handleUpdate(data) {
+            $('<div class="ui-loading ui-loader ui-loader-verbose ui-overlay-shadow ui-body-b ui-corner-all"><span class="ui-icon ui-icon-loading"></span><h1>Updating data</h1></div>')
+                .css({ 'display': 'block', 'opacity': 0.96, 'margin-left': '0', 'margin-top': '0'
+                    , 'top': 100
+                    , 'left': $(window).width() / 2 - 100
+                }).appendTo($.mobile.pageContainer)
+                .delay(800)
+                .fadeOut(800, function () {
+                    $(this).remove();
+                });
+            var html = [];
+            for (var i = 0; i < data.ttod.length; i++) {
+                var c = data.ttod[i];
+                html.push('<li data-role="list-divider">' + c.category + '</li>');
+                html.push('<li><a href="/driver?cn=' + c.car.number + '&dn=' + c.driver + '" data-ajax="false"><div style="position:absolute;font-size:50px;opacity:.3;right:20%;font-style:italic;">' + c.car.number + '</div><span class="ui-li-aside">' + c.value + '</span><h3 class="ui-li-heading">' + c.driver + '</h3><p>' + c.car.description + ' </p></a></li>');
+            }
+            lastpoll = data.lastpoll;
+            totalruns = data.runcount;
+            $('#ttodresults').empty().html(html.join('')).listview('refresh');
+            $('#ttodlastupdated').text(lastpoll);
+            $('#ttodruncount').text(totalruns);
+        }
+
+        var host = $.mobile.path.parseUrl(window.location.href);
+
+        var socket = io.connect('http://' + host.host);
+        socket.emit('ttod');
+        socket.on('ttod', handleUpdate);
+        
+</script>
+    </div>
+
+</body>
+</html>

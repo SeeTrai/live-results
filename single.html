@@ -1,0 +1,121 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>AXti.me Live Results</title> 
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link rel="apple-touch-startup-image" href="/images/axtime-ios-startup-748x1024.png" media="screen and (min-device-width: 481px) and (max-device-width: 1024px) and (orientation:landscape)">
+    <link rel="apple-touch-startup-image" href="/images/axtime-ios-startup-768x1004-portrait.png" media="screen and (min-device-width: 481px) and (max-device-width: 1024px) and (orientation:portrait)">
+    <link rel="apple-touch-startup-image" href="/images/axtime-ios-startup-320x460.png" media="screen and (max-device-width: 320px)">
+    <link rel="apple-touch-icon" href="/images/axtime-apple-touch-icon-57.png" />
+    <link rel="apple-touch-icon" sizes="72x72" href="/images/axtime-apple-touch-icon-72.png" />
+    <link rel="apple-touch-icon" sizes="114x114" href="/images/axtime-apple-touch-icon-114.png" /> 
+	<link rel="stylesheet" href="/jquery.mobile-1.1.0.min.css" />
+    <link rel="stylesheet" href="/style.css" />
+	<script src="/jquery-1.7.2.min.js"></script>
+	<script src="/jquery.mobile-1.1.0.min.js"></script>
+    <script src="/script.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div data-role="page" id="page-home">
+        <div data-role="header">
+            <a href="/index" data-ajax="false" data-icon="arrow-l" data-reverse="true">Home</a>
+            <h1>Live Results</h1>
+            <a data-role="button" id="btn-showdetails" data-icon="check" data-inline="true" class="ui-btn-active">Details</a>
+            <div id="btn-raw" data-role="navbar">
+                <ul><li><a href="#" id="btn-raw" data-theme="e" class="ui-btn-active btn-results">Raw</a></li>
+                    <li><a id="btn-class" href="#" data-theme="e" class="btn-results">Class</a></li>
+                    <li><a id="btn-pax" href="#" data-theme="e" class="btn-results">PAX</a></li>
+                    <li><a href="/runs" data-ajax="false" id="btn-runs" href="#" data-theme="e">Runs</a></li>
+                </ul>
+            </div>
+        </div>
+        <div data-role="content" style="padding-top:0px;">
+           <!--<div style="text-align:center;"><img src="/images/logo-100.png" /></div>-->
+            <div id="lyr-results">
+                <p id="info" style="margin-top:4px;">Times automatically update!<br /> # of Runs: <strong><span id="results-runcount">-</span></strong> -  Updated: <strong><span id="results-lastupdated">-</span></strong> </p>
+         
+                <p><a id="btn-selectclass" data-role="button" data-theme="b">Choose a Different Class</a></p>
+                <div id="classList">
+                    <ul class="class-select"></ul>
+                </div>
+                <div><p><ul id="resulttimes" data-role="listview" data-divider-theme="e"><li>Loading results...</li></ul></p></div>
+            </div>
+        </div> 
+        <div data-role="footer" data-position="fixed" class="custom-icons">
+            <div data-role="navbar" class="custom-icons">
+		        <ul>
+			        <li><a class="nb-carsearch" href="/results#dlg-carsearch" data-ajax="false" data-icon="custom">Car Search</a></li>
+			        <li><a class="nb-results" href="/results" data-ajax="false" data-icon="custom">Results</a></li>
+			        <li><a class="nb-runs" href="/runs" data-ajax="false" data-icon="custom">Runs</a></li>
+		        </ul>
+	        </div>
+        </div> 
+    </div>
+
+    <div data-role="page" id="dlg-carsearch">
+        <div data-role="header">
+            <h1><span id="carsearch-label">Car Search</span></h1>
+        </div>
+        <div data-role="content">
+            
+        <div data-role="controlgroup" data-type="horizontal">
+            <button class="btn-number" data-inline="true">1</button>
+            <button class="btn-number" data-inline="true">2</button>
+            <button class="btn-number" data-inline="true">3</button>
+           
+            <button class="btn-number" data-inline="true">4</button>
+            <button class="btn-number" data-inline="true">5</button>
+            <button class="btn-number" data-inline="true">6</button>
+            <!--</div>
+            <div data-role="controlgroup" data-type="horizontal">-->
+            <button class="btn-number" data-inline="true">7</button>
+            <button class="btn-number" data-inline="true">8</button>
+            <button class="btn-number" data-inline="true">9</button>
+            
+            <button class="btn-number" data-inline="true">0</button>
+            <button class="btn-number" data-inline="true" data-icon="arrow-l">Del</button>
+            <button class="btn-number" data-inline="true" data-icon="delete">Clr</button>
+        </div>
+        
+        <h1>Cars</h1>
+		<ul data-role="listview" id="carsearch-list">
+			
+		</ul>
+        </div>
+    </div>
+
+
+    <div data-role="page" id="page-driver">
+        <div data-role="header">
+            
+            <a href="/index" data-role="button" data-ajax="false" data-icon="home" data-reverse="true">Home</a>
+            <h1 id="drivername">Live Results</h1>
+            <a id="refreshtimes" data-role="button" data-ajax="false" data-icon="refresh" data-theme="b">Refresh</a>
+            
+            
+        </div>
+        <div data-role="content">
+           <div style="text-align:center;"><img src="/images/logo-100.png" /></div>
+           <p><a href="/results" data-theme="b" data-role="button" data-icon="arrow-l">Back to Live Results</a></p>
+           <p id="info"># of Runs: <strong><span id="driver-runcount">-</span></strong> -  Last Updated: <strong><span id="driver-lastupdated">-</span></strong></p>
+           <p id="driverinfo"></p>
+            <div class="ui-grid-b"><div class="ui-block-a">Overall<div style="text-align:center;font-size:50px;font-weight:bold;"><span id="rankoverall">-</span></div></div>
+            <div class="ui-block-b">Class<div style="text-align:center;font-size:50px;font-weight:bold;"><span id="rankclass">-</span></div></div>
+            <div class="ui-block-c">PAX<div style="text-align:center;font-size:50px;font-weight:bold;"><span id="rankpax">-</span></div></div>
+            </div>
+            <ul data-role="listview" id="dtlegend" data-inset="true" data-divider-theme="d">
+                <li data-role="list-divider">Legend</li>
+                <li data-theme="b" data-icon="check"><a href="#">Best Time</a></li>
+                <li data-theme="a" data-icon="delete"><a href="#">DNF</a></li>
+                <li data-theme="e" data-icon="alert"><a href="#">Gets A Rerun</a></li>
+            </ul>
+            <ul data-role="listview" id="drivertimes" data-inset="true" data-divider-theme="d">
+                <li data-role="list-divider">Times</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
