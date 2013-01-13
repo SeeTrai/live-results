@@ -11,7 +11,8 @@ var settings = {
     , timerId: 0
     , configOk: false
     , debug: false
-    , activeSockets:0
+    , activeSockets: 0
+    , version: '0.9.2'
 
 };
 
@@ -22,7 +23,7 @@ var express = require('express')
 , colors = require('./color')
 , dates = require('./dates')
 , parser = require('./parser')
-,config = require('./config');
+, config = require('./config');
 
 // do configs from file
 if (config.datafile) { settings.datafile = config.datafile; }
@@ -55,19 +56,19 @@ app.get('/driverdata', function (req, res) {
     res.send({ driver: driver, runs: truns, lastupdated:data.poller.lastpoll.formatDate('HH:mm:ss'), runcount:data.runs.length });
 });
 
-app.get('/driver', function (req, res) {
-    res.sendfile(__dirname + '/driver.html');
-});
+//app.get('/driver', function (req, res) {
+//    res.sendfile(__dirname + '/driver.html');
+//});
 
-app.get('/results', function (req, res) {
-    res.sendfile(__dirname + '/results.html');
-});
-app.get('/index', function (req, res) {
-    res.sendfile(__dirname + '/index.html');
-});
-app.get('/runs', function (req, res) {
-    res.sendfile(__dirname + '/runs.html');
-});
+//app.get('/results', function (req, res) {
+//    res.sendfile(__dirname + '/results.html');
+//});
+//app.get('/index', function (req, res) {
+//    res.sendfile(__dirname + '/index.html');
+//});
+//app.get('/runs', function (req, res) {
+//    res.sendfile(__dirname + '/runs.html');
+//});
 
 app.get('/', function (req, res) {
     res.sendfile(__dirname + '/results.html');
