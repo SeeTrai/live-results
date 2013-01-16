@@ -2,3 +2,4 @@
 node_modules
 local_package*
 *.cspkg
+data.json

@@ -13,7 +13,7 @@ var settings = {
     , debug: false
     , activeSockets: 0
     , version: '0.9.2'
-
+    , useTod:true
 };
 
 var express = require('express')
@@ -28,6 +28,7 @@ var express = require('express')
 // do configs from file
 if (config.datafile) { settings.datafile = config.datafile; }
 if (config.port) { settings.port = config.port; }
+if (config.useTod) { settings.useTod = config.useTod; }
 
 app.use(express.static(__dirname + '/jquery'));
 app.listen(settings.port);

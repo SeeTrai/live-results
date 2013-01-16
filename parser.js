@@ -10,11 +10,16 @@ var parseTimes = []
         , drivers: []
         , driverIdSeed:1
         , poller: { lastpoll: new Date() }
-    };
+    }
+    , useTod = true;
 
 
-function doit(datafile)
+function doit(datafile, usetod)
 {
+    if (usetod == null || usetod == undefined) {
+        useTod = true;
+    } else { useTod = usetod; }
+
  console.log('\nSTARTING PARSE...'.yellow);
     //sleep(5000);
     var start = new Date().getMilliseconds();
@@ -119,7 +124,8 @@ function parse(line) {
             }
             r.time = r.cones + r.rawtime;
             if (r.timepaxed == NaN || r.timepaxed == null) { r.timepaxed = r.time; }
-            if (!todFound) { return null; }
+            if (!todFound && !useTod) { return null; }
+            if (r.rawtime == 0 && !r.isDnf && !r.getRerun){return null;}
             return r;
         }
     }
@@ -309,7 +315,18 @@ function genstats() {
     }
 
     data.ttod = [ttodr, ttodp, ttodm, ttodw, ttodss, ttodfun, ttodck, ttodlost, ttodrr];
-
+    fs.readFile('data.json', 'utf8', function (err, djson) {
+        var dt = new Date();
+        var evs = dt.getFullYear() + '_' + (dt.getMonth()+1) + '_' + dt.getDate();
+        var dd = {};
+        if (!err) {
+            dd = JSON.parse(djson);
+            
+        } 
+        dd[evs] = data;
+        fs.writeFile('data.json', JSON.stringify(dd));
+    });
+    
 }
 
 function rankClass(drivers) {
