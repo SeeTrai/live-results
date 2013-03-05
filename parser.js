@@ -125,6 +125,7 @@ function parse(line) {
             r.time = r.cones + r.rawtime;
             if (r.timepaxed == NaN || r.timepaxed == null) { r.timepaxed = r.time; }
             if (!todFound && !useTod) { return null; }
+            if (r.driver.length == 0) { return null; }
             if (r.rawtime == 0 && !r.isDnf && !r.getRerun){return null;}
             return r;
         }
@@ -273,7 +274,7 @@ function genstats() {
     });
     var rank = 1;
     for (var i = 0; i < drivers.length; i++) {
-        if (drivers[i].axclass != 'FUN') {
+        if (drivers[i].axclass != 'FUN' && drivers[i].bestpax > 0) {
             drivers[i].rankp = rank;
             rank++;
         }
