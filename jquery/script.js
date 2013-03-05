@@ -139,7 +139,7 @@ function genDriver(driver) {
             html.push('<li' + theme + '><a href="#">' + r.time + '<span class="ui-li-count">' + r.cones + '</span></a></li>');
         }
     }
-
+    $('#lbl-classname').text(driver.axclass);
     $('#drivertimes').empty().html('<li data-role="list-divider">Times</li>' + html.join('')).listview('refresh');
     $('#rankclass').text(ranktext(driver.rankc));
     $('#rankoverall').text(ranktext(driver.ranko));
