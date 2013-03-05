@@ -10,10 +10,10 @@
     <link rel="apple-touch-icon" href="/images/axtime-apple-touch-icon-57.png" />
     <link rel="apple-touch-icon" sizes="72x72" href="/images/axtime-apple-touch-icon-72.png" />
     <link rel="apple-touch-icon" sizes="114x114" href="/images/axtime-apple-touch-icon-114.png" /> 
-	<link rel="stylesheet" href="/jquery.mobile-1.1.0.min.css" />
+	<link rel="stylesheet" href="/v1.3/jquery.mobile-1.3.0.min.css" />
     <link rel="stylesheet" href="/style.css" />
-	<script src="/jquery-1.7.2.min.js"></script>
-	<script src="/jquery.mobile-1.1.0.min.js"></script>
+	<script src="/jquery-1.9.1.min.js"></script>
+	<script src="/jquery.mobile-1.3.0.min.js"></script>
     <script src="/script.js"></script>
     <script src="/socket.io/socket.io.js"></script>
 </head> 
@@ -142,7 +142,7 @@
            <p id="info"># of Runs: <strong><span id="driver-runcount">-</span></strong> -  Last Updated: <strong><span id="driver-lastupdated">-</span></strong></p>
            <p id="driverinfo"></p>
             <div class="ui-grid-b"><div class="ui-block-a">Overall<div style="text-align:center;font-size:50px;font-weight:bold;"><span id="rankoverall">-</span></div></div>
-            <div class="ui-block-b">Class<div style="text-align:center;font-size:50px;font-weight:bold;"><span id="rankclass">-</span></div></div>
+            <div class="ui-block-b"><span id="lbl-classname">Class</span><div style="text-align:center;font-size:50px;font-weight:bold;"><span id="rankclass">-</span></div></div>
             <div class="ui-block-c">PAX<div style="text-align:center;font-size:50px;font-weight:bold;"><span id="rankpax">-</span></div></div>
             </div>
             <ul data-role="listview" id="dtlegend" data-inset="true" data-divider-theme="d">
