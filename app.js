@@ -13,7 +13,8 @@ var settings = {
     , debug: false
     , activeSockets: 0
     , version: '0.9.4'
-    , useTod:true
+    , useTod: true
+    , maxRunsCounted: 0
 };
 
 var express = require('express')
@@ -29,6 +30,7 @@ var express = require('express')
 if (config.datafile) { settings.datafile = config.datafile; }
 if (config.port) { settings.port = config.port; }
 if (config.useTod) { settings.useTod = config.useTod; }
+if (config.maxRunsCounted) { settings.maxRunsCounted = config.maxRunsCounted; }
 
 app.use(express.static(__dirname + '/jquery'));
 app.listen(settings.port);
@@ -36,6 +38,19 @@ app.listen(settings.port);
 console.log(('Started server on port ' + settings.port + '...').green);
 
 
+app.get('/historical', function (req, res) {
+    fs.readFile('data.json', 'utf8', function (err, djson) {
+        var dt = new Date();
+        var evs = dt.getFullYear() + '_' + (dt.getMonth() + 1) + '_' + dt.getDate();
+        var dd = {};
+        if (!err) {
+            dd = JSON.parse(djson);
+
+        }
+        dd[evs] = data;
+        res.send(dd);
+    });
+});
 
 app.get('/driverdata', function (req, res) {
     var cn = req.param('cn',null)
@@ -88,7 +103,7 @@ var data = {
 };
 
 
-data = parser.doit(settings.datafile);
+data = parser.doit(settings.datafile, settings);
 
 //fs.writeFile('ttod.json', JSON.stringify(data.ttod));
 //fs.writeFile('drivers.json', JSON.stringify(data.drivers));
@@ -100,7 +115,7 @@ fs.watch(settings.datafile, function (ev, fn) {
         console.log('already running'.red);
     }
     else {
-        data = parser.doit(settings.datafile);
+        data = parser.doit(settings.datafile, settings);
 
         io.sockets.emit('ttod', { ttod: data.ttod, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: data.runs.length });
         io.sockets.emit('results', { drivers: data.drivers, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: data.runs.length });

@@ -11,14 +11,18 @@ var parseTimes = []
         , driverIdSeed:1
         , poller: { lastpoll: new Date() }
     }
-    , useTod = true;
+    , useTod = true
+    , maxRunsCounted = 0;
 
 
-function doit(datafile, usetod)
+function doit(datafile, settings)
 {
+    var usetod = settings.useTod;
     if (usetod == null || usetod == undefined) {
         useTod = true;
     } else { useTod = usetod; }
+
+    maxRunsCounted = settings.maxRunsCounted;
 
  console.log('\nSTARTING PARSE...'.yellow);
     //sleep(5000);
@@ -245,13 +249,13 @@ function genstats() {
 
         if (driver == null) {
             
-            driver = { id:data.driverIdSeed, name: run.driver, axclass: run.axclass, best: 9999, bestpax: 9999, runCount: 0, dnfCount: 0, cones: 0, reruns: 0, car: run.car, ranko: 0, rankc: 0, rankp: 0, times: [] };
+            driver = { id:data.driverIdSeed, name: run.driver, axclass: run.axclass, best: 9999, bestpax: 9999, runCount: 0, totalRuns:0, dnfCount: 0, cones: 0, reruns: 0, car: run.car, ranko: 0, rankc: 0, rankp: 0, times: [] };
             drivers.push(driver);
             driverIx = (dcnt + 1);
             data.driverIdSeed++;
         }
 
-        if (driver.best > run.time && !run.isDnf && !run.getRerun) {
+        if (driver.best > run.time && !run.isDnf && !run.getRerun && (maxRunsCounted == 0 || driver.runCount < maxRunsCounted)) {
             driver.best = run.time;
             driver.bestpax = run.timepaxed;
         }
@@ -262,7 +266,10 @@ function genstats() {
         if (run.getRerun) {
             driver.reruns++;
         }
-        driver.runCount++;
+        else {
+            driver.runCount++;
+        }
+        driver.totalRuns++;
         drivers[driverIx] = driver;
 
     } //for t
@@ -298,7 +305,6 @@ function genstats() {
 
     //genAlerts(data.drivers, drivers);
 
-
     data.drivers = drivers;
 
     //loop through
@@ -318,7 +324,8 @@ function genstats() {
     data.ttod = [ttodr, ttodp, ttodm, ttodw, ttodss, ttodfun, ttodck, ttodlost, ttodrr];
     fs.readFile('data.json', 'utf8', function (err, djson) {
         var dt = new Date();
-        var evs = dt.getFullYear() + '_' + (dt.getMonth()+1) + '_' + dt.getDate();
+        var mo = dt.getMonth() + 1;
+        var evs = dt.getFullYear() + '_' + (mo) + '_' + dt.getDate();
         var dd = {};
         if (!err) {
             dd = JSON.parse(djson);

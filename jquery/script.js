@@ -334,7 +334,7 @@ var search = '', lastval = '';
 
 function dofilter(val) {
     var list = $('#carsearch-list')
-		        , listview = list.data("listview")
+		        , listview = list.data("mobile-listview")
                 , itemtext = ''
                 ;
 
@@ -354,7 +354,7 @@ function dofilter(val) {
         for (var i = listItems.length - 1; i >= 0; i--) {
             item = $(listItems[i]);
             itemtext = item.jqmData("filtertext") || item.text();
-
+            //console.log(listview);
             if (item.is("li:jqmData(role=list-divider)")) {
 
                 item.toggleClass("ui-filter-hidequeue", !childItems);
@@ -362,11 +362,13 @@ function dofilter(val) {
                 // New bucket!
                 childItems = false;
 
-            } else if (listview.options.filterCallback(itemtext, val)) {
+            }
+            else if (listview.options.filterCallback(itemtext, val)) {
 
                 //mark to be hidden
                 item.toggleClass("ui-filter-hidequeue", true);
-            } else {
+            }
+            else {
 
                 // There's a shown item in the bucket
                 childItems = true;
@@ -389,7 +391,7 @@ function dofilter(val) {
         //filtervalue is empty => show all
         listItems.toggleClass("ui-screen-hidden", false);
     }
-    listview._refreshCorners();
+    //listview._refreshCorners();
 }
 
 

@@ -87,7 +87,7 @@ width: 42px!important; height: 30px!important; margin-left: -21px !important; bo
     background-size: 42px 21px;
     width:42px !important;
 }
-.ui-dialog .ui-dialog-contain { margin-top: 0 }
+.ui-dialog .ui-dialog-contain { margin-top: 16px; }
 
 @media (min-width: 640px)
 {
