@@ -12,7 +12,7 @@ var settings = {
     , configOk: false
     , debug: false
     , activeSockets: 0
-    , version: '0.9.4'
+    , version: '0.9.5'
     , useTod: true
     , maxRunsCounted: 0
 };
