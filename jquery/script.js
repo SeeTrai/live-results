@@ -3,8 +3,7 @@
 var selectedClass = null;
 var settings = {
     showDetails: true
-    , displayResults: 0 // 0-raw time, 1=class
-    , interval:10000
+    , displayResults: 0 // 0-raw time, 1=class, 2=pax
 };
 function reloadDrivers() {
     $.ajax({

@@ -111,3 +111,113 @@ width: 42px!important; height: 30px!important; margin-left: -21px !important; bo
       
       
 }
+
+span.rank {
+    font-size:60px;
+}
+.rank-overall {
+}
+.rank-overall span.paxrank, .rank-overall span.classrank {display:none;}
+.rank-overall span.rawrank {display:inline;}
+.rank-overall li.rawexclude, .rank-overall .paxtime, .rank-overall .classtime {display: none;}
+
+.rank-pax span.paxrank {display:inline;}
+.rank-pax span.rawrank, .rank-pax span.classrank {display:none;}
+.rank-pax li.paxexclude, .rank-pax .rawtime, .rank-pax .classtime {display:none;}
+
+.rank-class span.classrank {display:inline;}
+.rank-class span.rawrank, .rank-class span.paxrank
+    , .rank-class .paxtime, .rank-class .rawtime, .rank-class .nonclass {display:none;}
+
+.nodetails .details
+{
+    display: none;
+}
+.nodetails span.rank
+{
+    font-size: 50px;
+}
+
+.carnumber {
+    position: absolute;
+    font-size: 50px;
+    opacity: .5;
+    right: 20%;
+    font-style: italic;
+    -webkit-text-shadow: 3px 3px 1px rgba(150, 150, 150, 1);
+    text-shadow: 3px 3px 1px rgba(150, 150, 150, 1);
+    color:#000;
+}
+    .carnumber.small {
+        font-size:30px;
+    }
+    .carnumber.light {
+        color: #F5FFEA;
+        -webkit-text-shadow: 3px 3px 1px rgba(0, 0, 0, 1);
+        text-shadow: 3px 3px 1px rgba(0, 0, 0, 1);
+    }
+
+ul.class-select 
+{
+    list-style: none;
+    margin: 0;
+    display:block;
+    padding:0;
+}
+
+ul.class-select li 
+{
+    width:90px;
+    height:40px;
+    float:left;
+    display:list-item;
+    
+}
+
+ul.class-select li a 
+{
+    display:block;
+    height:100%;
+    width:100%;
+    text-align:center;
+    font-size:16px;
+    line-height:40px;
+    margin:0;
+    overflow:hidden;
+}
+.driver-ranks
+{
+    text-align: center;
+    font-size: 50px;
+    font-weight: bold;
+}
+@media (min-width: 600px)
+{
+   /* .logo-horiz 
+      {
+        background:transparent url(images/axtime-logo-horizontal.png) 50% 50% no-repeat;
+        width: 600px;
+        height:117px;
+        margin: 0 auto;
+      }
+     */ 
+   ul.class-select li {width:150px;height:60px;}
+      ul.class-select li a {line-height:60px;font-size:24px;}
+      
+}
+@media (max-width:599px)
+{
+    .rankcontainer
+    {
+        float:none;
+        display:inline;
+    }
+    .rankcontainer span.rank
+    {
+        font-size: 1em;
+    }
+    .driver-ranks
+    {
+        font-size:26px;
+    }
+}

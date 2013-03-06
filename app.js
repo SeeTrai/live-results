@@ -12,7 +12,7 @@ var settings = {
     , configOk: false
     , debug: false
     , activeSockets: 0
-    , version: '0.9.5'
+    , version: '2.0.0'
     , useTod: true
     , maxRunsCounted: 0
 };
@@ -52,6 +52,19 @@ app.get('/historical', function (req, res) {
     });
 });
 
+app.get('/driverruns/:id', function (req, res) {
+    var id = parseInt(req.params.id);
+
+    var n = [];
+    for (var i = 0; i < data.runs.length; i++) {
+        if (data.runs[i].driverId == id) {
+            n.push(data.runs[i]);
+        }
+    }
+
+    res.send(n);
+});
+
 app.get('/driverdata', function (req, res) {
     var cn = req.param('cn',null)
         , dn = req.param('dn',null)
@@ -87,7 +100,7 @@ app.get('/driverdata', function (req, res) {
 //});
 
 app.get('/', function (req, res) {
-    res.sendfile(__dirname + '/results.html');
+    res.sendfile(__dirname + '/results-incremental.html');
 });
 
 
@@ -116,10 +129,15 @@ fs.watch(settings.datafile, function (ev, fn) {
     }
     else {
         data = parser.doit(settings.datafile, settings);
-
-        io.sockets.emit('ttod', { ttod: data.ttod, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: data.runs.length });
-        io.sockets.emit('results', { drivers: data.drivers, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: data.runs.length });
-        io.sockets.emit('runs', { runs: data.runs, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: data.runs.length });
+        var runCount = data.runs.length;
+        io.sockets.emit('changes', { drivers: data.changes, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount });
+        io.sockets.emit('ttod', { ttod: data.ttod, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount });
+        //io.sockets.emit('results', { drivers: data.drivers, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount });
+        var last20 = [];
+        for (var i = (runCount < 21 ? 0 : (runCount - 21)) ; i < runCount; i++) {
+            last20.push(data.runs[i]);
+        }
+        io.sockets.in('runs').emit('runs', { runs: last20, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount });
 
     }
 });
@@ -131,15 +149,32 @@ io.sockets.on('connection', function (socket) {
     //socket.emit('ttod', { ttod: data.ttod, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: data.runs.length });
     //socket.emit('results', { drivers: data.drivers, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: data.runs.length });
     settings.activeSockets++;
-		console.log('Connected: ' + settings.activeSockets);
+    console.log('Connected: ' + settings.activeSockets);
+    
+    //socket.emit('init-results', { drivers: data.drivers, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: data.runs.length });
+
+    socket.on('join-runs', function (d) {
+        socket.join('runs');
+        var last20 = [], runCount = data.runs.length;
+
+        for (var i = (runCount < 21 ? 0 : (runCount - 21)) ; i < runCount; i++) {
+            last20.push(data.runs[i]);
+        }
+        socket.emit('runs', { runs: last20, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount });
+    });
+    socket.on('leave-runs', function (data) { socket.leave('runs'); });
+
     socket.on('ttod', function (d) {
         socket.emit('ttod', { ttod: data.ttod, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: data.runs.length });
+    });
+    socket.on('init-results', function (d) {
+        socket.emit('init-results', { drivers: data.drivers, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: data.runs.length });
     });
     socket.on('results', function (d) {
         socket.emit('results', { drivers: data.drivers, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: data.runs.length });
     });
-    socket.on('runs', function (d) {
-        socket.emit('runs', { runs: data.runs, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: data.runs.length });
+    socket.on('init-runs', function (d) {
+        socket.emit('init-runs', { runs: data.runs, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: data.runs.length });
     });
 
     socket.on('disconnect', function () {
