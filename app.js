@@ -12,7 +12,7 @@ var settings = {
     , configOk: false
     , debug: false
     , activeSockets: 0
-    , version: '2.0.0'
+    , version: '2.0.1'
     , useTod: true
     , maxRunsCounted: 0
 };
@@ -24,7 +24,8 @@ var express = require('express')
 , colors = require('./color')
 , dates = require('./dates')
 , parser = require('./parser')
-, config = require('./config');
+, config = require('./config')
+, http = require('http');
 
 // do configs from file
 if (config.datafile) { settings.datafile = config.datafile; }
@@ -85,24 +86,75 @@ app.get('/driverdata', function (req, res) {
     res.send({ driver: driver, runs: truns, lastupdated:data.poller.lastpoll.formatDate('HH:mm:ss'), runcount:data.runs.length });
 });
 
-//app.get('/driver', function (req, res) {
-//    res.sendfile(__dirname + '/driver.html');
-//});
-
-//app.get('/results', function (req, res) {
-//    res.sendfile(__dirname + '/results.html');
-//});
-//app.get('/index', function (req, res) {
-//    res.sendfile(__dirname + '/index.html');
-//});
-//app.get('/runs', function (req, res) {
-//    res.sendfile(__dirname + '/runs.html');
-//});
 
 app.get('/', function (req, res) {
     res.sendfile(__dirname + '/results-incremental.html');
 });
 
+app.get('/uploadtoaxr', function (req, res) {
+    var connected = false;
+    console.log('Testing internet connection...');
+
+    http.get('http://www.autocrossresults.com/Content/mobile.css', function (nres) {
+        console.log(nres.statusCode);
+        res.sendfile(__dirname + '/upload.html');
+    }).on('error', function (e) {
+            console.log('error connecting: ' + e.message);
+            res.sendfile(__dirname + '/upload-nointernet.html');
+        });
+
+});
+
+app.post('/uploadtoaxr', function (req, res) {
+    var accessKey = 'AFE368157C07449B902E360CA910EDED'
+        , counts = true;//req.body.counts == 'yes';
+    //AFE368157C07449B902E360CA910EDED
+    var classes = [], start = new Date().getTime();
+    console.log('Uploading results to AutocrossResults.com...'.red)
+    // {name, index}
+    for (var i = 0; i < data.drivers.length; i++) {
+        var exists = false;
+        var driver = data.drivers[i];
+        for (var c = 0; c < classes.length; c++) {
+            if (driver.axclass == classes[c].name) {
+                exists = true;
+                break;
+            }
+        }
+        if (!exists) {
+            if (driver.best > 0 && driver.bestpax > 0) {
+                var index = Math.floor(driver.bestpax / driver.best * 1000) / 1000;
+                index = index > 1 ? 1 : index;
+                classes.push({ name: driver.axclass, index: index.toString() });
+            }
+        }
+    }
+    classes.sort(function (a, b) {
+        return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
+    });
+    //console.log(classes);
+    
+    var d = { data: { accessKey: accessKey, runs: data.runs, drivers: data.drivers, eventDate: '3/6/2013', axclasses: classes, counts:counts } };
+    var ds = JSON.stringify(d);
+    var options = { host: 'www.autocrossresults.com', path: '/api/LR_Import', method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': ds.length } };
+
+    var nreq = http.request(options, function (nres) {
+        nres.setEncoding('utf-8');
+        var rs = '';
+        nres.on('data', function (d) {
+            rs += d;
+        });
+        nres.on('end', function () {
+            console.log(rs);
+            console.log(((new Date().getTime() - start) / 1000) + ' secs');
+            res.send(rs);
+
+        });
+
+    });
+    nreq.write(ds);
+    nreq.end();
+});
 
 var running = false, doAnother = false;
 

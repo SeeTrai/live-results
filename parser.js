@@ -274,7 +274,7 @@ function genstats() {
             
             driver = {
                 id: masterDriver.id, name: masterDriver.name, axclass: masterDriver.axclass, best: 9999, bestpax: 9999
-                , runCount: 0, totalRuns: 0, dnfCount: 0, cones: 0, reruns: 0, car: run.car, ranko: 0, rankc: 0, rankp: 0, times: []
+                , runCount: 0, totalRuns: 0, dnfCount: 0, cones: 0, reruns: 0, car: run.car, ranko: 0, rankc: 0, rankp: 0//, times: []
                 , rawDiffo: 0, rawDiffp: 0, paxDiffo:0, paxDiffp:0, classDiffo:0, classDiffp:0
             };
             drivers.push(driver);
