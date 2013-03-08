@@ -181,7 +181,7 @@ function ttoditem(dr, car, axclass, v, cat) {
 function genAlerts(prev, curr) {
     var changes = [];
     var log = '';
-    console.log('prev: ' + prev.length + ', curr:' + curr.length);
+    console.log('calculating changes');
     if (prev.length > 0) {
         for (var i = 0; i < curr.length; i++) {
             var d = curr[i];
@@ -305,11 +305,8 @@ function genstats() {
         }
 
         data.runs[t].driverId = driver.id;
-        if (driver.id == 42) {
-            console.log('best: ' + driver.best + ', run.time: ' + run.time);
-        }
+       
         if (driver.best > run.time && !run.isDnf && !run.getRerun && (maxRunsCounted == 0 || driver.runCount < maxRunsCounted)) {
-            if (driver.id == 42) console.log('best changed: runcount:' + driver.runCount);
             driver.best = run.time;
             driver.bestpax = run.timepaxed;
         }

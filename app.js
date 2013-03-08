@@ -157,7 +157,7 @@ app.post('/uploadtoaxr', function (req, res) {
             rs += d;
         });
         nres.on('end', function () {
-            console.log(rs);
+            //console.log(rs);
             console.log(((new Date().getTime() - start) / 1000) + ' secs');
             res.send(rs);
 
