@@ -6,6 +6,7 @@ var settings = {
     showDetails: true
     , displayResults: 0 // 0-raw time, 1=class, 2=pax
 };
+
 //function reloadDrivers() {
 //    $.ajax({
 //        url: '/driversdata?' + new Date().getTime()
@@ -145,9 +146,9 @@ function refreshDriver() {
                         theme = ' data-theme="b" data-icon="check"';
                     }
 
-                    html.push('<li' + theme + '><a href="#">' + r.time + '<span class="ui-li-count">' + r.cones + '</span></a></li>');
+                    html.push('<li' + theme + '><a href="#">' + r.time + ' (' + r.timepaxed  + ')<span class="ui-li-count">' + r.cones + '</span></a></li>');
                 }
-                $('#drivertimes').empty().html('<li data-role="list-divider">Times</li>' + html.join('')).listview('refresh');
+                $('#drivertimes').empty().html('<li data-role="list-divider">Times (PAX)</li>' + html.join('')).listview('refresh');
             }
         });
     }
@@ -303,12 +304,19 @@ function popClasses() {
 
         var exists = false;
         for (var f = 0; f < cls.length; f++) {
-            if (p.axclass == cls[f]) {
-                exists = true;
-                break;
-            }
+            
+                if (p.superClass == cls[f]) {
+                    exists = true;
+                    break;
+                }
+           
+                //if (p.axclass == cls[f]) {
+                //    exists = true;
+                //    break;
+                //}
+            
         }
-        if (!exists) { cls.push(p.axclass); }
+        if (!exists) { cls.push(p.superClass); }
     }
     cls.sort();
     classes = cls;

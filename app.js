@@ -12,9 +12,11 @@ var settings = {
     , configOk: false
     , debug: false
     , activeSockets: 0
-    , version: '2.0.1'
+    , version: '2.0.3'
     , useTod: true
     , maxRunsCounted: 0
+    , allowFunInOverall: true
+    , useSuperClassing:true
 };
 
 var express = require('express')
@@ -32,12 +34,22 @@ if (config.datafile) { settings.datafile = config.datafile; }
 if (config.port) { settings.port = config.port; }
 if (config.useTod) { settings.useTod = config.useTod; }
 if (config.maxRunsCounted) { settings.maxRunsCounted = config.maxRunsCounted; }
+if (config.allowFunInOverall) { settings.allowFunInOverall = config.allowFunInOverall; }
+if (config.useSuperClassing) { settings.useSuperClassing = config.useSuperClassing; }
+
+
 
 app.use(express.static(__dirname + '/jquery'));
 app.listen(settings.port);
 
 console.log(('Started server on port ' + settings.port + '...').green);
 
+app.get('/config', function (req, res) {
+    res.setHeader('Content-Type','application/javascript');
+    var s = settings;
+    s.datafile = '';
+    res.send('var config = ' + JSON.stringify(s));
+});
 
 app.get('/historical', function (req, res) {
     fs.readFile('data.json', 'utf8', function (err, djson) {

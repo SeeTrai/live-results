@@ -15,11 +15,13 @@ var parseTimes = []
     , masterDrivers=[]
     , useTod = true
     , maxRunsCounted = 0
-    , runNumber = 0;
+    , runNumber = 0
+    , settings = {};
 
 
-function doit(datafile, settings)
+function doit(datafile, setgs)
 {
+    settings = setgs;
     var usetod = settings.useTod;
     if (usetod == null || usetod == undefined) {
         useTod = true;
@@ -121,6 +123,9 @@ function parse(line) {
                     }
                 }
             }
+            //determine super classes
+            r.superClass = getSuperClass(r.axclass);
+
             r.time = r.cones + r.rawtime;
             if (r.timepaxed == NaN || r.timepaxed == null) { r.timepaxed = r.time; }
             if (!todFound && !useTod) { return null; }
@@ -135,12 +140,31 @@ function parse(line) {
     return null;
 }
 
+function getSuperClass(cls) {
+    if (settings.useSuperClassing) {
+        if (cls.indexOf('-') > -1) {
+            var supc = cls.split('-')[0];
+            if (cls.substring(0, 4).toLowerCase() == 'n-st') supc = 'NS';
+            else if (supc.substring(0, 3).toLowerCase() == 'fun') supc = 'FUN';
+            return supc;
+        } 
+    }
+    return cls;
+}
+
 function run() {
 
     return {
         n: 0, axclass: '', driver: '', car: { description: '', number: '', year: 0, color: '' }
         , rawtime: 0.0, cones: 0, isDnf: false, getRerun: false, tod: 0, time: 0, timepaxed: 0, runNumber: 0
-        , driverId:0
+        , driverId:0, superClass:''
+    };
+}
+function driverObj(id, name, cls, scls) {
+    return {
+        id: id, name: name, axclass: cls, superClass: scls, best: 9999, bestpax: 9999
+        , runCount: 0, totalRuns: 0, dnfCount: 0, cones: 0, reruns: 0, car: {}, ranko: 0, rankc: 0, rankp: 0//, times: []
+        , rawDiffo: 0, rawDiffp: 0, paxDiffo: 0, paxDiffp: 0, classDiffo: 0, classDiffp: 0
     };
 }
 
@@ -259,7 +283,7 @@ function genstats() {
             }
         }
         if (masterDriver == null){
-            masterDriver = {id:data.driverIdSeed, name: run.driver, axclass:run.axclass, carNumber:run.car.number};
+            masterDriver = {id:data.driverIdSeed, name: run.driver, axclass:run.axclass, carNumber:run.car.number, superClass:run.superClass};
             masterDrivers.push(masterDriver);
             data.driverIdSeed++;
         }
@@ -272,11 +296,8 @@ function genstats() {
 
         if (driver == null) {
             
-            driver = {
-                id: masterDriver.id, name: masterDriver.name, axclass: masterDriver.axclass, best: 9999, bestpax: 9999
-                , runCount: 0, totalRuns: 0, dnfCount: 0, cones: 0, reruns: 0, car: run.car, ranko: 0, rankc: 0, rankp: 0//, times: []
-                , rawDiffo: 0, rawDiffp: 0, paxDiffo:0, paxDiffp:0, classDiffo:0, classDiffp:0
-            };
+            driver = new driverObj(masterDriver.id, masterDriver.name, masterDriver.axclass, masterDriver.superClass);
+            driver.car = run.car;
             drivers.push(driver);
             //console.log(driver);
             //driverIx = (dcnt + 1);
@@ -284,8 +305,11 @@ function genstats() {
         }
 
         data.runs[t].driverId = driver.id;
-
+        if (driver.id == 42) {
+            console.log('best: ' + driver.best + ', run.time: ' + run.time);
+        }
         if (driver.best > run.time && !run.isDnf && !run.getRerun && (maxRunsCounted == 0 || driver.runCount < maxRunsCounted)) {
+            if (driver.id == 42) console.log('best changed: runcount:' + driver.runCount);
             driver.best = run.time;
             driver.bestpax = run.timepaxed;
         }
@@ -311,7 +335,7 @@ function genstats() {
     });
     var rank = 1, besto=0, bestp=0;
     for (var i = 0; i < drivers.length; i++) {
-        if (drivers[i].axclass != 'FUN' && drivers[i].bestpax > 0) {
+        if (drivers[i].axclass.substring(0,3).toLowerCase() != 'fun' && drivers[i].bestpax > 0) {
             if (besto == 0) { besto = drivers[i].bestpax; bestp = besto; }
             drivers[i].rankp = rank;
             drivers[i].paxDiffo = Math.floor((drivers[i].bestpax - besto) *1000) /1000;
@@ -321,7 +345,8 @@ function genstats() {
         }
     }
 
-    drivers = rankClass2(drivers);
+    //drivers = rankClass2(drivers);
+    drivers = parsers.rankClass3(drivers);
 
     //do overall ranking
     drivers.sort(function (a, b) {
@@ -331,13 +356,14 @@ function genstats() {
 
     for (var i = 0; i < drivers.length; i++) {
         if (drivers[i].best > 0) {
-            if (besto == 0){ besto = drivers[i].best; bestp = besto; }
-            drivers[i].ranko = rank;
-            drivers[i].rawDiffo = Math.floor((drivers[i].best - besto) *1000)/1000;
-            drivers[i].rawDiffp = Math.floor((drivers[i].best - bestp)*1000)/1000;
-            bestp = drivers[i].best;
-            rank++;
-
+            if (settings.allowFunInOverall || (!settings.allowFunInOverall && drivers[i].axclass.substring(0, 3).toLowerCase() != 'fun')) {
+                if (besto == 0) { besto = drivers[i].best; bestp = besto; }
+                drivers[i].ranko = rank;
+                drivers[i].rawDiffo = Math.floor((drivers[i].best - besto) * 1000) / 1000;
+                drivers[i].rawDiffp = Math.floor((drivers[i].best - bestp) * 1000) / 1000;
+                bestp = drivers[i].best;
+                rank++;
+            }
         }
     }
 
@@ -376,6 +402,96 @@ function genstats() {
     });
     
 }
+
+var parsers = {
+    'rankClass3': function (drivers) {
+        var ds = drivers;
+        
+        if (settings.useSuperClassing) {
+            ds.sort(function (a, b) {
+                if (a.superClass == b.superClass) {
+                    return a.bestpax - b.bestpax;
+                } else {
+                    return a.superClass < b.superClass ? -1 : 1;
+                }
+            });
+
+            var rank = 1, besto = 0, bestp = 0, cls = '';
+            for (var i = 0; i < ds.length; i++) {
+                if (ds[i].bestpax > 0) {
+                    if (cls != ds[i].superClass) {
+                        rank = 1;
+                        besto = ds[i].bestpax;
+                        bestp = besto;
+                        cls = ds[i].superClass;
+                    }
+                    ds[i].rankc = rank;
+                    ds[i].classDiffo = Math.floor((ds[i].bestpax - besto) * 1000) / 1000;
+                    ds[i].classDiffp = Math.floor((ds[i].bestpax - bestp) * 1000) / 1000;
+                    bestp = ds[i].bestpax;
+                    rank++;
+                }
+            }
+        }
+        else {
+            ds.sort(function (a, b) {
+                if (a.axclass == b.axclass) {
+                    return a.best - b.best;
+                } else {
+                    return a.axclass < b.axclass ? -1 : 1;
+                }
+            });
+
+            var rank = 1, besto = 0, bestp = 0, cls = '';
+            for (var i = 0; i < ds.length; i++) {
+                if (ds[i].best > 0) {
+                    if (cls != ds[i].axclass) {
+                        rank = 1;
+                        besto = ds[i].best;
+                        bestp = besto;
+                        cls = ds[i].axclass;
+                    }
+                    ds[i].rankc = rank;
+                    ds[i].classDiffo = Math.floor((ds[i].best - besto) * 1000) / 1000;
+                    ds[i].classDiffp = Math.floor((ds[i].best - bestp) * 1000) / 1000;
+                    bestp = ds[i].best;
+                    rank++;
+                }
+            }
+        }
+        return ds;
+    }
+    , 'rankClass2': function (drivers) {
+        var ds = drivers;
+        ds.sort(function (a, b) {
+            if (a.axclass == b.axclass) {
+                return a.best - b.best;
+            } else {
+                return a.axclass < b.axclass ? -1 : 1;
+            }
+        });
+
+        var rank = 1, besto = 0, bestp = 0, cls = '';
+        for (var i = 0; i < ds.length; i++) {
+            if (ds[i].best > 0) {
+                if (cls != ds[i].axclass) {
+                    rank = 1;
+                    besto = ds[i].best;
+                    bestp = besto;
+                    cls = ds[i].axclass;
+                }
+                ds[i].rankc = rank;
+                ds[i].classDiffo = Math.floor((ds[i].best - besto) * 1000) / 1000;
+                ds[i].classDiffp = Math.floor((ds[i].best - bestp) * 1000) / 1000;
+                bestp = ds[i].best;
+                rank++;
+            }
+        }
+
+        return ds;
+    }
+};
+
 function rankClass2(drivers) {
     var ds = drivers;
     ds.sort(function (a, b) {

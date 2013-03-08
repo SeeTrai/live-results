@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="/style.css" />
 	<script src="/jquery-1.9.1.min.js"></script>
 	<script src="/jquery.mobile-1.3.0.min.js"></script>
+	<script src="/config" type="text/javascript"></script>
     <script src="/incremental.js"></script>
     <script src="/socket.io/socket.io.js"></script>
 </head> 
@@ -134,7 +135,7 @@
                 <li data-theme="e" data-icon="alert"><a href="#">Gets A Rerun</a></li>
             </ul>
             <ul data-role="listview" id="drivertimes" data-inset="true" data-divider-theme="d">
-                <li data-role="list-divider">Times</li>
+                <li data-role="list-divider">Times (PAX)</li>
             </ul>
         </div>
         <div data-role="footer" data-position="fixed" data-id="footerbar" class="custom-icons">
@@ -357,7 +358,7 @@
                 + '<h3 class="ui-li-heading">' + p.name + '</h3><p style="font-size:1.2em;">'
                 + '<span class="time rawtime">' + p.best + (p.ranko > 1 ? ('<span style="color:red;"> +' + p.rawDiffo + '</span><span style="color:red;font-size:.8em;"> +' + p.rawDiffp + '</span>') : '') + '</span>'
                 + '<span class="time paxtime">' + p.bestpax + (p.rankp > 1 ? ('<span style="color:red;"> +' + p.paxDiffo + '</span><span style="color:red;font-size:.8em;"> +' + p.paxDiffp + '</span>') : '') + '</span>'
-                + '<span class="time classtime">' + p.best + (p.rankc > 1 ? ('<span style="color:red;"> +' + p.classDiffo + '</span><span style="color:red;font-size:.8em;"> +' + p.classDiffp + '</span>') : '') + '</span>'
+                + '<span class="time classtime">' + (config.useSuperClassing ? p.bestpax : p.best) + (p.rankc > 1 ? ('<span style="color:red;"> +' + p.classDiffo + '</span><span style="color:red;font-size:.8em;"> +' + p.classDiffp + '</span>') : '') + '</span>'
                 + '</p><p class="ui-li-desc details">DNFs: ' + p.dnfCount + ', Re-runs:' + p.reruns + ', Cones:' + p.cones + '</br>' + p.axclass+ '</p><span class="ui-li-count">' + p.runCount + '</span>'
                 + '</a></li>';
         }
@@ -406,7 +407,7 @@
                 });
 
                 for (var i = 0; i < items.length; i++) {
-                    if ($(items[i]).data('driver').axclass != selectedClass) {
+                    if ($(items[i]).data('driver').superClass != selectedClass) {
                         $(items[i]).addClass('nonclass');
                     } else {
                         $(items[i]).removeClass('nonclass');
