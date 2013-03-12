@@ -3,34 +3,36 @@
 var parseTimes = []
     , running = false
     , doAnother = false
-    , tokens= ['run', 'class', 'number', 'tm', 'penalty', 'driver', 'car', 'cc', 'pos', 'tod', 'paxed']
-    ,data = {
+    , tokens = ['run', 'class', 'number', 'tm', 'penalty', 'driver', 'car', 'cc', 'pos', 'tod', 'paxed']
+    , data = {
         runs: []
         , ttod: []
         , drivers: []
-        , driverIdSeed:1
+        , driverIdSeed: 1
         , poller: { lastpoll: new Date() }
-        , changes:[]
+        , changes: []
+        , results: {}
     }
-    , masterDrivers=[]
+    , masterDrivers = []
     , useTod = true
     , maxRunsCounted = 0
     , runNumber = 0
-    , settings = {};
+    , configuration = {}
+    , previousRuns = [];
 
 
-function doit(datafile, setgs)
-{
-    settings = setgs;
-    var usetod = settings.useTod;
+function doit(datafile, setgs) {
+    configuration = setgs;
+    var usetod = configuration.useTod;
     if (usetod == null || usetod == undefined) {
         useTod = true;
     } else { useTod = usetod; }
     runNumber = 1;
-    maxRunsCounted = settings.maxRunsCounted;
+    maxRunsCounted = configuration.maxRunsCounted;
+    secondsPerCone = configuration.secondsPerCone;
 
     console.log('\nSTARTING PARSE...'.yellow);
-    
+
     var start = new Date().getMilliseconds();
     var s = null;
     try {
@@ -40,15 +42,16 @@ function doit(datafile, setgs)
         console.log('***************************************************************'.red);
         console.log('ERROR CONNECTING TO AXWARE FILE'.red.bold);
         console.log(err.toString().red.bold);
+        console.log('datafile: ' + datafile);
         console.log('***************************************************************'.red);
-        //settings.timerId = setTimeout(doit, settings.interval);
+        //configuration.timerId = setTimeout(doit, configuration.interval);
         running = false;
         return data;
     }
     //var s = fs.readFileSync('w:\pcalast.st1', 'utf8');
     var rows = s.split('\n');
     console.log(('\tROWS to parse: ' + rows.length));
- 
+
     runs = [];
     for (var i = 0; i < rows.length; i++) {
         var r = rows[i];
@@ -56,9 +59,8 @@ function doit(datafile, setgs)
         if (runParsed != null) {
             runs.push(runParsed);
         }
-       
     }
-
+    var pruns = data.runs;
     data.runs = runs;
     data.poller.lastpoll = new Date();
     console.log('\tRUNS COUNT: ' + data.runs.length);
@@ -67,27 +69,28 @@ function doit(datafile, setgs)
     parseTimes.push({ date: new Date(), ms: stop - start });
 
     console.log('\tgenerating stats...');
-    genstats();
-  
+    var results = genstats(pruns);
+    data.results = results.runChanges;
+
     console.log('\t' + new Date());
     console.log(('FINISHED PARSE in ' + (stop - start) + 'ms\n').yellow);
-    //settings.timerId = setTimeout(doit, settings.interval);
+    //configuration.timerId = setTimeout(doit, configuration.interval);
     running = false;
 
     return data;
 
-//    if (doAnother) {
-//        running = true;
-//        setTimeout(doit, 500);
-//        doAnother = false;
-//    }
+    //    if (doAnother) {
+    //        running = true;
+    //        setTimeout(doit, 500);
+    //        doAnother = false;
+    //    }
 }
 
 
 function parse(line) {
-    
+
     var r = new run();
-    //var tokens = settings.tokens;
+    //var tokens = configuration.tokens;
     if (line.substring(0, 4) == '_run' || line.substring(0, 6) == '_class') {
 
         var todFound = false;
@@ -126,7 +129,7 @@ function parse(line) {
             //determine super classes
             r.superClass = getSuperClass(r.axclass);
 
-            r.time = r.cones + r.rawtime;
+            r.time = (r.cones * secondsPerCone) + r.rawtime;
             if (r.timepaxed == NaN || r.timepaxed == null) { r.timepaxed = r.time; }
             if (!todFound && !useTod) { return null; }
             if (r.driver.length == 0) { return null; }
@@ -141,13 +144,13 @@ function parse(line) {
 }
 
 function getSuperClass(cls) {
-    if (settings.useSuperClassing) {
+    if (configuration.useSuperClassing) {
         if (cls.indexOf('-') > -1) {
             var supc = cls.split('-')[0];
             if (cls.substring(0, 4).toLowerCase() == 'n-st') supc = 'NS';
             else if (supc.substring(0, 3).toLowerCase() == 'fun') supc = 'FUN';
             return supc;
-        } 
+        }
     }
     return cls;
 }
@@ -157,19 +160,19 @@ function run() {
     return {
         n: 0, axclass: '', driver: '', car: { description: '', number: '', year: 0, color: '' }
         , rawtime: 0.0, cones: 0, isDnf: false, getRerun: false, tod: 0, time: 0, timepaxed: 0, runNumber: 0
-        , driverId:0, superClass:''
+        , driverId: 0, superClass: ''
     };
 }
 function driverObj(id, name, cls, scls) {
     return {
         id: id, name: name, axclass: cls, superClass: scls, best: 9999, bestpax: 9999
-        , runCount: 0, totalRuns: 0, dnfCount: 0, cones: 0, reruns: 0, car: {}, ranko: 0, rankc: 0, rankp: 0//, times: []
+        , runCount: 0, totalRuns: 0, dnfCount: 0, cones: 0, reruns: 0, car: { description: '', number: '', year: 0, color: '' }, ranko: 0, rankc: 0, rankp: 0//, times: []
         , rawDiffo: 0, rawDiffp: 0, paxDiffo: 0, paxDiffp: 0, classDiffo: 0, classDiffp: 0
     };
 }
 
 function ttoditem(dr, car, axclass, v, cat) {
-    var cr = car == null ? { description: '', number: '', year: 0, color: ''} : car;
+    var cr = car == null ? { description: '', number: '', year: 0, color: '' } : car;
     return { driver: dr, car: cr, axclass: axclass, value: v, category: cat };
 }
 
@@ -225,7 +228,8 @@ function genAlerts(prev, curr) {
 }
 
 
-function genstats() {
+function genstats(pr) {
+    var prevruns = pr;
     var classes = [];
     var ttodr = new ttoditem('-', null, '', 99999, 'Raw Time');
     var ttodp = new ttoditem('-', null, '', 99999, 'PAX Time');
@@ -277,25 +281,25 @@ function genstats() {
         //lookup master driver
         var driver = null, driverIx = -1, dcnt = -1, masterDriver = null;
         for (var d = 0; d < masterDrivers.length; d++) {
-            
-            if (masterDrivers[d].name == dv && masterDrivers[d].carNumber == run.car.number && masterDrivers[d].axclass == run.axclass) { 
-                masterDriver = masterDrivers[d];  break;
+
+            if (masterDrivers[d].name == dv && masterDrivers[d].carNumber == run.car.number && masterDrivers[d].axclass == run.axclass) {
+                masterDriver = masterDrivers[d]; break;
             }
         }
-        if (masterDriver == null){
-            masterDriver = {id:data.driverIdSeed, name: run.driver, axclass:run.axclass, carNumber:run.car.number, superClass:run.superClass};
+        if (masterDriver == null) {
+            masterDriver = { id: data.driverIdSeed, name: run.driver, axclass: run.axclass, carNumber: run.car.number, superClass: run.superClass };
             masterDrivers.push(masterDriver);
             data.driverIdSeed++;
         }
         else {
-            for (var d=0;d<drivers.length;d++){
+            for (var d = 0; d < drivers.length; d++) {
                 dcnt = d;
-                if (drivers[d].id == masterDriver.id) {driver = drivers[d];driverIx = d; break;}
+                if (drivers[d].id == masterDriver.id) { driver = drivers[d]; driverIx = d; break; }
             }
         }
 
         if (driver == null) {
-            
+
             driver = new driverObj(masterDriver.id, masterDriver.name, masterDriver.axclass, masterDriver.superClass);
             driver.car = run.car;
             drivers.push(driver);
@@ -305,7 +309,7 @@ function genstats() {
         }
 
         data.runs[t].driverId = driver.id;
-       
+
         if (driver.best > run.time && !run.isDnf && !run.getRerun && (maxRunsCounted == 0 || driver.runCount < maxRunsCounted)) {
             driver.best = run.time;
             driver.bestpax = run.timepaxed;
@@ -330,12 +334,12 @@ function genstats() {
     drivers.sort(function (a, b) {
         return a.bestpax - b.bestpax;
     });
-    var rank = 1, besto=0, bestp=0;
+    var rank = 1, besto = 0, bestp = 0;
     for (var i = 0; i < drivers.length; i++) {
-        if (drivers[i].axclass.substring(0,3).toLowerCase() != 'fun' && drivers[i].bestpax > 0) {
+        if (drivers[i].axclass.substring(0, 3).toLowerCase() != 'fun' && drivers[i].bestpax > 0) {
             if (besto == 0) { besto = drivers[i].bestpax; bestp = besto; }
             drivers[i].rankp = rank;
-            drivers[i].paxDiffo = Math.floor((drivers[i].bestpax - besto) *1000) /1000;
+            drivers[i].paxDiffo = Math.floor((drivers[i].bestpax - besto) * 1000) / 1000;
             drivers[i].paxDiffp = Math.floor((drivers[i].bestpax - bestp) * 1000) / 1000;
             bestp = drivers[i].bestpax;
             rank++;
@@ -353,7 +357,7 @@ function genstats() {
 
     for (var i = 0; i < drivers.length; i++) {
         if (drivers[i].best > 0) {
-            if (settings.allowFunInOverall || (!settings.allowFunInOverall && drivers[i].axclass.substring(0, 3).toLowerCase() != 'fun')) {
+            if (configuration.allowFunInOverall || (!configuration.allowFunInOverall && drivers[i].axclass.substring(0, 3).toLowerCase() != 'fun')) {
                 if (besto == 0) { besto = drivers[i].best; bestp = besto; }
                 drivers[i].ranko = rank;
                 drivers[i].rawDiffo = Math.floor((drivers[i].best - besto) * 1000) / 1000;
@@ -366,7 +370,12 @@ function genstats() {
 
     // do alerts
 
+    //compare runs to do reload or update
+
     data.changes = genAlerts(data.drivers, drivers);
+
+    runChanges = genRunChanges(prevruns);
+    
 
     data.drivers = drivers;
 
@@ -391,20 +400,58 @@ function genstats() {
         var evs = dt.getFullYear() + '_' + (mo) + '_' + dt.getDate();
         var dd = {};
         if (!err) {
-            dd = JSON.parse(djson);
-            
-        } 
-        dd[evs] = data;
-        fs.writeFile('data.json', JSON.stringify(dd));
+            try {
+                dd = JSON.parse(djson);
+                dd[evs] = data;
+                fs.writeFile('data.json', JSON.stringify(dd));
+            }
+            catch (err) {
+                console.log(('WRITE to backup FAILED: ' + err).red);
+            }
+
+        }
+
     });
-    
+
+    return {runChanges:runChanges};
 }
+
+
+function genRunChanges(pr) {
+    var matchcount = 0;
+    var prlen = pr.length
+        , drlen = data.runs.length
+        , len = drlen < prlen ? drlen : prlen
+        , diffix = -2
+        , newruns=[];
+
+    for (var i = 0; i < pr.length; i++) {
+        
+        if (JSON.stringify(pr[i]) != JSON.stringify(data.runs[i])) { 
+            break;
+        }
+        diffix = i;
+    }
+
+    //console.log('run matches: ' + (diffix +1));
+
+    if (diffix == prlen - 1) {
+        console.log('previous matches, do diff');
+        newruns = data.runs.slice(diffix + 1);
+        console.log('new runs: ' + newruns.length);
+    }
+    else console.log('do reload');
+
+    //console.log(newruns);
+    return { diffIx: diffix, reload: diffix != prlen-1, newRuns:newruns };
+}
+
 
 var parsers = {
     'rankClass3': function (drivers) {
         var ds = drivers;
-        
-        if (settings.useSuperClassing) {
+
+        if (configuration.useSuperClassing) {
             ds.sort(function (a, b) {
                 if (a.superClass == b.superClass) {
                     return a.bestpax - b.bestpax;
@@ -509,7 +556,7 @@ function rankClass2(drivers) {
                 cls = ds[i].axclass;
             }
             ds[i].rankc = rank;
-            ds[i].classDiffo = Math.floor((ds[i].best - besto)*1000)/1000;
+            ds[i].classDiffo = Math.floor((ds[i].best - besto) * 1000) / 1000;
             ds[i].classDiffp = Math.floor((ds[i].best - bestp) * 1000) / 1000;
             bestp = ds[i].best;
             rank++;

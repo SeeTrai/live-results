@@ -6,20 +6,25 @@ var settings = {
     , port: 3000
     , parseTimes: []
     , tokens: ['run', 'class', 'number', 'tm', 'penalty', 'driver', 'car', 'cc', 'pos', 'tod', 'paxed']
-    , interval: 30000
     , isStarted: false
     , timerId: 0
     , configOk: false
     , debug: false
     , activeSockets: 0
-    , version: '2.0.3'
+    , version: '2.0.4'
     , useTod: true
     , maxRunsCounted: 0
     , allowFunInOverall: true
-    , useSuperClassing:true
+    , useSuperClassing: true
+    , secondsPerCone: 1
+    , isLocal: true
+    , accessKey: 'LqeWfspi6WB2F3fi1Vv5Y1'
+    , uploadToCloud: true
+    , cloudConfig: { host: 'localhost', port: 3000 }
 };
 
-var express = require('express')
+var pjson = require('./package.json')
+, express = require('express')
 , app = express.createServer()
 , io = require('socket.io').listen(app)
 , fs = require('fs')
@@ -29,14 +34,26 @@ var express = require('express')
 , config = require('./config')
 , http = require('http');
 
-// do configs from file
-if (config.datafile) { settings.datafile = config.datafile; }
-if (config.port) { settings.port = config.port; }
-if (config.useTod) { settings.useTod = config.useTod; }
-if (config.maxRunsCounted) { settings.maxRunsCounted = config.maxRunsCounted; }
-if (config.allowFunInOverall) { settings.allowFunInOverall = config.allowFunInOverall; }
-if (config.useSuperClassing) { settings.useSuperClassing = config.useSuperClassing; }
+settings.version = pjson.version;
 
+//production
+//settings.accessKey = '4DCYEe7jJs-0GT5brBifmH';
+//settings.cloudConfig.host = 'axtimelr.nodejitsu.com';
+//settings.cloudConfig.port = 80;
+
+if (settings.isLocal) {
+    // do configs from file
+    if (config.datafile) { settings.datafile = config.datafile; }
+    if (config.port) { settings.port = config.port; }
+    if (config.useTod) { settings.useTod = config.useTod; }
+    if (config.maxRunsCounted) { settings.maxRunsCounted = config.maxRunsCounted; }
+    if (config.allowFunInOverall) { settings.allowFunInOverall = config.allowFunInOverall; }
+    if (config.useSuperClassing) { settings.useSuperClassing = config.useSuperClassing; }
+    if (config.secondsPerCone) { settings.secondsPerCone = config.secondsPerCone; }
+} else {
+    settings.port = 80;
+
+}
 
 
 app.use(express.static(__dirname + '/jquery'));
@@ -44,10 +61,41 @@ app.listen(settings.port);
 
 console.log(('Started server on port ' + settings.port + '...').green);
 
+//app.get('/api/importrun/:accesskey', function (req, res) {
+//    if (!settings.isLocal) {
+//        //lookup access key
+
+//        //get today's event
+
+//        //add run
+
+//        // recalc
+
+//        // send changes
+//    }
+//    else {
+//        res.send({'status':'error', message:'Invalid request.  System is running in local mode.'});
+//    }
+//});
+
+app.get('/stats', function (req, res) {
+    var html = [];
+    html.push('<html><body>');
+    html.push('<p>Version: ' + settings.version + '</p>');
+    html.push('<p>Active Sockets: ' + settings.activeSockets + '</p>');
+    html.push('<p>Last Updated: ' + settings.lastpoll + '</p>');
+    html.push('<p>Run Count: ' + data.runs.length + '</p>');
+    html.push('<p>Drivers: ' + data.drivers.length + '</p>');
+
+    html.push('</body></html>');
+
+    res.send(html.join(''));
+});
+
 app.get('/config', function (req, res) {
     res.setHeader('Content-Type','application/javascript');
     var s = settings;
-    s.datafile = '';
+    //s.datafile = '';
     res.send('var config = ' + JSON.stringify(s));
 });
 
@@ -100,7 +148,11 @@ app.get('/driverdata', function (req, res) {
 
 
 app.get('/', function (req, res) {
-    res.sendfile(__dirname + '/results-incremental.html');
+    if (settings.isLocal) {
+        res.sendfile(__dirname + '/results-incremental.html');
+    } else {
+        // send club chooser
+    }
 });
 
 app.get('/uploadtoaxr', function (req, res) {
@@ -182,31 +234,70 @@ var data = {
 
 data = parser.doit(settings.datafile, settings);
 
+if (settings.uploadToCloud) {
+    var sendCfg = { drivers: [], runs: [], reload: true, useSuperClassing:settings.useSuperClassing, date:new Date().formatDate('MM/dd/yyyy'), lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: data.runs.length };
+    
+    sendCfg.reload = true;
+    sendCfg.runs = data.runs;
+    sendCfg.drivers = data.drivers;
+    
+    console.log('Uploading first pass to cloud.');
+    //TODO only send when there are changes
+    sendIt(sendCfg);
+}
+
 //fs.writeFile('ttod.json', JSON.stringify(data.ttod));
 //fs.writeFile('drivers.json', JSON.stringify(data.drivers));
 //fs.writeFile('runs.json', JSON.stringify(data.runs));
 
-fs.watch(settings.datafile, function (ev, fn) {
-    if (running) {
-        doAnother = true;
-        console.log('already running'.red);
-    }
-    else {
-        data = parser.doit(settings.datafile, settings);
-        var runCount = data.runs.length;
-        io.sockets.emit('changes', { drivers: data.changes, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount });
-        io.sockets.emit('ttod', { ttod: data.ttod, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount });
-        //io.sockets.emit('results', { drivers: data.drivers, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount });
-        var last20 = [];
-        for (var i = (runCount < 21 ? 0 : (runCount - 21)) ; i < runCount; i++) {
-            last20.push(data.runs[i]);
+if (settings.isLocal) {
+    fs.watch(settings.datafile, function (ev, fn) {
+        var file = settings.datafile;
+        if (running) {
+            doAnother = true;
+            console.log('already running'.red);
         }
-        io.sockets.in('runs').emit('runs', { runs: last20, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount });
+        else {
+            running = true;
+            data = parser.doit(file, settings);
+            var runCount = data.runs.length; var last20 = [];
+            
 
-    }
-});
-console.log(('Watching file ' + settings.datafile + ' for changes').green.bold);
 
+            io.sockets.emit('changes', { drivers: data.changes, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount });
+            io.sockets.emit('ttod', { ttod: data.ttod, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount });
+            running = false;
+
+            console.log('fswatch: runcount: ' + runCount);
+            if (settings.uploadToCloud) {
+                var sendCfg = {drivers:[], runs:[], reload:false, lastpoll:data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount};
+
+                if (data.results.reload) {
+                    sendCfg.reload = true;
+                    sendCfg.runs = data.runs;
+                    sendCfg.drivers = data.drivers;
+                } else {
+                    sendCfg.runs = data.results.newRuns;
+                    sendCfg.drivers = data.changes;
+                }
+                //console.log(sendCfg);
+                //TODO only send when there are changes
+                sendIt(sendCfg);
+            }
+            for (var i = (runCount < 21 ? 0 : (runCount - 21)) ; i < runCount; i++) {
+                last20.push(data.runs[i]);
+            }
+            //io.sockets.emit('results', { drivers: data.drivers, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount });
+            //var last20 = [];
+            //for (var i = (runCount < 21 ? 0 : (runCount - 21)) ; i < runCount; i++) {
+            //    last20.push(data.runs[i]);
+            //}
+            io.sockets.in('runs').emit('runs', { runs: last20, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount });
+
+        }
+    });
+    console.log(('Watching file ' + settings.datafile + ' for changes').green.bold);
+}
 io.set('log level', 1);
 
 io.sockets.on('connection', function (socket) {
@@ -247,4 +338,45 @@ io.sockets.on('connection', function (socket) {
     });
 });
 
+function sendIt(dat) {
+    var host = settings.cloudConfig.host
+        , port = settings.cloudConfig.port
+        , start = new Date().getTime();
+    //console.log(d);
+    //console.log(dat.drivers[0]);
+    var d = { runs: dat.runs, drivers: dat.drivers, reload:dat.reload, lastpoll: dat.lastpoll, runcount: dat.runcount, useSuperClassing:settings.useSuperClassing, date:new Date().formatDate('MM/dd/yyyy') };
+    var ds = JSON.stringify(d);
+    var options = { host: host, port: port, path: '/api/importruns/' + settings.accessKey, method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': ds.length } };
+    //{ drivers: data.changes, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount, last20: last20 
+    //console.log('send body');
+    //console.log(ds);
 
+    //TODO build in reload request handler from cloud version
+
+    try {
+        var nreq = http.request(options, function (nres) {
+            nres.setEncoding('utf-8');
+            var rs = '';
+            nres.on('data', function (d) {
+                rs += d;
+            });
+            nres.on('end', function () {
+            
+                var result = JSON.parse(rs);
+                if (nres.statusCode == 200 && result.status == 'success') {
+                    console.log('upload status: ' + nres.statusCode);
+                
+                }
+                console.log('Uploaded to cloud in ' + ((new Date().getTime() - start) / 1000) + ' secs');
+            
+            });
+
+        });
+        nreq.write(ds);
+        nreq.end();
+    }
+    catch (err) {
+        console.log('ERROR uploading to cloud. You should restart the application.'.red);
+        //TODO put requests into queue and have basic queue system to guarantee uploads are done in order
+    }
+}
