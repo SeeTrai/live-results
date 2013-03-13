@@ -68,9 +68,11 @@ function doit(datafile, setgs) {
     var stop = new Date().getMilliseconds();
     parseTimes.push({ date: new Date(), ms: stop - start });
 
+    
     console.log('\tgenerating stats...');
     var results = genstats(pruns);
     data.results = results.runChanges;
+    
 
     console.log('\t' + new Date());
     console.log(('FINISHED PARSE in ' + (stop - start) + 'ms\n').yellow);
@@ -184,7 +186,7 @@ function ttoditem(dr, car, axclass, v, cat) {
 function genAlerts(prev, curr) {
     var changes = [];
     var log = '';
-    console.log('calculating changes');
+    console.log('\tcalculating changes');
     if (prev.length > 0) {
         for (var i = 0; i < curr.length; i++) {
             var d = curr[i];
@@ -222,7 +224,7 @@ function genAlerts(prev, curr) {
         }
     }
     //console.log(('Changes detected: ' + changes.length).yellow);
-    console.log(log.bold.yellow);
+    console.log('\tlog: ' + log.bold.yellow);
     return changes;
 
 }
@@ -374,8 +376,8 @@ function genstats(pr) {
 
     data.changes = genAlerts(data.drivers, drivers);
 
-    runChanges = genRunChanges(prevruns);
-    
+    var runChanges = genRunChanges(prevruns);
+    //var runChanges = {};
 
     data.drivers = drivers;
 
@@ -416,34 +418,43 @@ function genstats(pr) {
     return {runChanges:runChanges};
 }
 
-
+//TODO put this earlier, before stats gen'd
 function genRunChanges(pr) {
+    // diffix, relead, newruns, nochanges
     var matchcount = 0;
     var prlen = pr.length
         , drlen = data.runs.length
         , len = drlen < prlen ? drlen : prlen
         , diffix = -2
-        , newruns=[];
+        , newruns = []
+        , nochanges = false;
 
     for (var i = 0; i < pr.length; i++) {
         
-        if (JSON.stringify(pr[i]) != JSON.stringify(data.runs[i])) { 
+        if (JSON.stringify(pr[i]) != JSON.stringify(data.runs[i])) {
             break;
         }
         diffix = i;
     }
 
+    //console.log('DiffIX: ' + diffix);
+    //console.log('drlen: ' + drlen);
+    //console.log('prlen: ' + prlen);
     //console.log('run matches: ' + (diffix +1));
 
-    if (diffix == prlen - 1) {
-        console.log('previous matches, do diff');
-        newruns = data.runs.slice(diffix + 1);
-        console.log('new runs: ' + newruns.length);
+    if (diffix + 1 == drlen) {
+        console.log('\tNO CHANGES');
+        nochanges = true;
     }
-    else console.log('do reload');
+    else if (diffix == prlen - 1) {
+        console.log('\tprevious matches, do diff');
+        newruns = data.runs.slice(diffix + 1);
+        console.log('\tnew runs: ' + newruns.length);
+    }
+    else console.log('\tdo reload');
 
     //console.log(newruns);
-    return { diffIx: diffix, reload: diffix != prlen-1, newRuns:newruns };
+    return { diffIx: diffix, reload: diffix != prlen-1, newRuns:newruns, nochanges:nochanges };
 }
 
 

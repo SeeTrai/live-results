@@ -11,17 +11,19 @@ var settings = {
     , configOk: false
     , debug: false
     , activeSockets: 0
-    , version: '2.0.4'
+    , version: '2.0.5'
     , useTod: true
     , maxRunsCounted: 0
     , allowFunInOverall: true
-    , useSuperClassing: true
+    , useSuperClassing: false
     , secondsPerCone: 1
     , isLocal: true
     , accessKey: 'LqeWfspi6WB2F3fi1Vv5Y1'
     , uploadToCloud: true
     , cloudConfig: { host: 'localhost', port: 3000 }
 };
+
+var uploadQueue = [], uploadRunning = false;
 
 var pjson = require('./package.json')
 , express = require('express')
@@ -37,7 +39,10 @@ var pjson = require('./package.json')
 settings.version = pjson.version;
 
 //production
-//settings.accessKey = '4DCYEe7jJs-0GT5brBifmH';
+//LPR = ozOaSY61iyQf1S3wEbEXqM
+// GGR = YnL5mdlJDV8ZsWjxgtObay
+// SFR = 4DCYEe7jJs-0GT5brBifmH
+//settings.accessKey = 'YnL5mdlJDV8ZsWjxgtObay';
 //settings.cloudConfig.host = 'axtimelr.nodejitsu.com';
 //settings.cloudConfig.port = 80;
 
@@ -55,28 +60,19 @@ if (settings.isLocal) {
 
 }
 
+console.log('cloud config:' + settings.cloudConfig.host + ':' + settings.cloudConfig.port);
 
-app.use(express.static(__dirname + '/jquery'));
+
+app.configure(function () {
+    app.set('port', process.env.PORT || 3000);
+    app.set('views', __dirname + '/views');
+    app.set('view engine', 'jade');
+    app.use(express.static(__dirname + '/jquery'));
+});
+
 app.listen(settings.port);
 
 console.log(('Started server on port ' + settings.port + '...').green);
-
-//app.get('/api/importrun/:accesskey', function (req, res) {
-//    if (!settings.isLocal) {
-//        //lookup access key
-
-//        //get today's event
-
-//        //add run
-
-//        // recalc
-
-//        // send changes
-//    }
-//    else {
-//        res.send({'status':'error', message:'Invalid request.  System is running in local mode.'});
-//    }
-//});
 
 app.get('/stats', function (req, res) {
     var html = [];
@@ -99,6 +95,10 @@ app.get('/config', function (req, res) {
     res.send('var config = ' + JSON.stringify(s));
 });
 
+app.get('/about', function (req, res) {
+    res.send('About');
+});
+
 app.get('/historical', function (req, res) {
     fs.readFile('data.json', 'utf8', function (err, djson) {
         var dt = new Date();
@@ -106,7 +106,6 @@ app.get('/historical', function (req, res) {
         var dd = {};
         if (!err) {
             dd = JSON.parse(djson);
-
         }
         dd[evs] = data;
         res.send(dd);
@@ -243,7 +242,9 @@ if (settings.uploadToCloud) {
     
     console.log('Uploading first pass to cloud.');
     //TODO only send when there are changes
-    sendIt(sendCfg);
+    uploadQueue.push(sendCfg);
+    doQueue();
+    //sendIt(sendCfg);
 }
 
 //fs.writeFile('ttod.json', JSON.stringify(data.ttod));
@@ -260,40 +261,46 @@ if (settings.isLocal) {
         else {
             running = true;
             data = parser.doit(file, settings);
-            var runCount = data.runs.length; var last20 = [];
-            
+            if (!data.results.nochanges) {
+                var runCount = data.runs.length; var last20 = [];
 
+                io.sockets.emit('changes', { drivers: data.changes, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount });
+                io.sockets.emit('ttod', { ttod: data.ttod, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount });
+                running = false;
 
-            io.sockets.emit('changes', { drivers: data.changes, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount });
-            io.sockets.emit('ttod', { ttod: data.ttod, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount });
-            running = false;
+                //console.log('fswatch: runcount: ' + runCount);
+                if (settings.uploadToCloud) {
+                    var sendCfg = { drivers: [], runs: [], reload: false, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount };
 
-            console.log('fswatch: runcount: ' + runCount);
-            if (settings.uploadToCloud) {
-                var sendCfg = {drivers:[], runs:[], reload:false, lastpoll:data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount};
-
-                if (data.results.reload) {
-                    sendCfg.reload = true;
-                    sendCfg.runs = data.runs;
-                    sendCfg.drivers = data.drivers;
-                } else {
-                    sendCfg.runs = data.results.newRuns;
-                    sendCfg.drivers = data.changes;
+                    if (data.results.reload) {
+                        sendCfg.reload = true;
+                        sendCfg.runs = data.runs;
+                        sendCfg.drivers = data.drivers;
+                    } else {
+                        sendCfg.runs = data.results.newRuns;
+                        sendCfg.drivers = data.changes;
+                    }
+                    //console.log(sendCfg);
+                    //TODO only send when there are changes
+                    //sendIt(sendCfg);
+                    uploadQueue.push(sendCfg);
+                    doQueue();
                 }
-                //console.log(sendCfg);
-                //TODO only send when there are changes
-                sendIt(sendCfg);
-            }
-            for (var i = (runCount < 21 ? 0 : (runCount - 21)) ; i < runCount; i++) {
-                last20.push(data.runs[i]);
-            }
-            //io.sockets.emit('results', { drivers: data.drivers, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount });
-            //var last20 = [];
-            //for (var i = (runCount < 21 ? 0 : (runCount - 21)) ; i < runCount; i++) {
-            //    last20.push(data.runs[i]);
-            //}
-            io.sockets.in('runs').emit('runs', { runs: last20, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount });
 
+                for (var i = (runCount < 21 ? 0 : (runCount - 21)) ; i < runCount; i++) {
+                    last20.push(data.runs[i]);
+                }
+                //io.sockets.emit('results', { drivers: data.drivers, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount });
+                //var last20 = [];
+                //for (var i = (runCount < 21 ? 0 : (runCount - 21)) ; i < runCount; i++) {
+                //    last20.push(data.runs[i]);
+                //}
+                io.sockets.in('runs').emit('runs', { runs: last20, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount });
+            }
+            else {
+                //console.log('\tNO CHANGES');
+                running = false;
+            }
         }
     });
     console.log(('Watching file ' + settings.datafile + ' for changes').green.bold);
@@ -338,13 +345,23 @@ io.sockets.on('connection', function (socket) {
     });
 });
 
+
+function doQueue() {
+    if (uploadQueue.length > 0) {
+        uploadRunning = true;
+        var q = uploadQueue[0];
+        sendIt(q);
+    }
+}
+
 function sendIt(dat) {
     var host = settings.cloudConfig.host
         , port = settings.cloudConfig.port
-        , start = new Date().getTime();
-    //console.log(d);
-    //console.log(dat.drivers[0]);
-    var d = { runs: dat.runs, drivers: dat.drivers, reload:dat.reload, lastpoll: dat.lastpoll, runcount: dat.runcount, useSuperClassing:settings.useSuperClassing, date:new Date().formatDate('MM/dd/yyyy') };
+        , start = new Date().getTime()
+        , date = '9/15/2012' //new Date().formatDate('MM/dd/yyyy')
+        ;
+
+    var d = { runs: dat.runs, drivers: dat.drivers, reload:dat.reload, lastpoll: dat.lastpoll, runcount: dat.runcount, useSuperClassing:settings.useSuperClassing, date:date };
     var ds = JSON.stringify(d);
     var options = { host: host, port: port, path: '/api/importruns/' + settings.accessKey, method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': ds.length } };
     //{ drivers: data.changes, lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: runCount, last20: last20 
@@ -361,21 +378,32 @@ function sendIt(dat) {
                 rs += d;
             });
             nres.on('end', function () {
-            
+                uploadRunning = false;
                 var result = JSON.parse(rs);
                 if (nres.statusCode == 200 && result.status == 'success') {
+                    
                     console.log('upload status: ' + nres.statusCode);
-                
+                    uploadQueue.shift();
+                    setTimeout(doQueue, 1);
+                    console.log('Uploaded to cloud in ' + ((new Date().getTime() - start) / 1000) + ' secs');
+                } else {
+                    uploadRunning = false;
+                    console.log('FAILED TO SYNCH WITH THE CLOUD!'.red);
                 }
-                console.log('Uploaded to cloud in ' + ((new Date().getTime() - start) / 1000) + ' secs');
+                
             
             });
 
+        });
+        nreq.on('error', function (er) {
+            uploadRunning = false;
+            console.log(('ERROR synching data with cloud. Message: ' + er.message).red);
         });
         nreq.write(ds);
         nreq.end();
     }
     catch (err) {
+        uploadRunning = false;
         console.log('ERROR uploading to cloud. You should restart the application.'.red);
         //TODO put requests into queue and have basic queue system to guarantee uploads are done in order
     }
