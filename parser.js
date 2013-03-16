@@ -410,8 +410,8 @@ function genstats(pr) {
             catch (err) {
                 console.log(('WRITE to backup FAILED: ' + err).red);
             }
-
         }
+        else { console.log(err.toString().red);}
 
     });
 
