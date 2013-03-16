@@ -42,9 +42,9 @@ settings.version = pjson.version;
 //LPR = ozOaSY61iyQf1S3wEbEXqM
 // GGR = YnL5mdlJDV8ZsWjxgtObay
 // SFR = 4DCYEe7jJs-0GT5brBifmH
-//settings.accessKey = 'YnL5mdlJDV8ZsWjxgtObay';
-//settings.cloudConfig.host = 'axtimelr.nodejitsu.com';
-//settings.cloudConfig.port = 80;
+settings.accessKey = 'YnL5mdlJDV8ZsWjxgtObay';
+settings.cloudConfig.host = 'axtimelr.nodejitsu.com';
+settings.cloudConfig.port = 80;
 
 if (settings.isLocal) {
     // do configs from file
@@ -358,7 +358,7 @@ function sendIt(dat) {
     var host = settings.cloudConfig.host
         , port = settings.cloudConfig.port
         , start = new Date().getTime()
-        , date = '9/15/2012' //new Date().formatDate('MM/dd/yyyy')
+        , date = new Date().formatDate('MM/dd/yyyy')
         ;
 
     var d = { runs: dat.runs, drivers: dat.drivers, reload:dat.reload, lastpoll: dat.lastpoll, runcount: dat.runcount, useSuperClassing:settings.useSuperClassing, date:date };
