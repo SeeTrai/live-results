@@ -105,26 +105,28 @@ function parse(line) {
                     if (z == tokens[t]) {
 
                         var v = s[i + 1];
-                        if (z == 'run') { r.n = parseInt(v); }
-                        else if (z == 'class') { r.axclass = v; }
-                        else if (z == 'number') { r.car.number = v; }
-                        else if (z == 'tm') { r.rawtime = parseFloat(v); }
-                        else if (z == 'penalty') {
-                            if (v == 'DNF') { r.isDnf = true; }
-                            else if (v == 'RRN') { r.getRerun = true; }
-                            else { r.cones = parseInt(v); }
-                        }
-                        else if (z == 'driver') { r.driver = v; }
-                        else if (z == 'car') { r.car.description = v; }
-                        else if (z == 'cc') { r.car.color = v; }
-                        else if (z == 'tod') {
-                            if (v.indexOf('-')) {
-                                v = v.split(' - ')[0];
+                        if (v !== undefined) {
+                            if (z == 'run') { r.n = parseInt(v); }
+                            else if (z == 'class') { r.axclass = v; }
+                            else if (z == 'number') { r.car.number = v; }
+                            else if (z == 'tm') { r.rawtime = parseFloat(v); }
+                            else if (z == 'penalty') {
+                                if (v == 'DNF') { r.isDnf = true; }
+                                else if (v == 'RRN') { r.getRerun = true; }
+                                else { r.cones = parseInt(v); }
                             }
-                            r.tod = parseInt(v);
-                            todFound = true;
+                            else if (z == 'driver') { r.driver = v; }
+                            else if (z == 'car') { r.car.description = v; }
+                            else if (z == 'cc') { r.car.color = v; }
+                            else if (z == 'tod') {
+                                if (v.indexOf('-')) {
+                                    v = v.split(' - ')[0];
+                                }
+                                r.tod = parseInt(v);
+                                todFound = true;
+                            }
+                            else if (z == 'paxed') { r.timepaxed = parseFloat(v); }
                         }
-                        else if (z == 'paxed') { r.timepaxed = parseFloat(v); }
                     }
                 }
             }
