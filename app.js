@@ -19,7 +19,7 @@ var settings = {
     , secondsPerCone: 1
     , isLocal: true
     , accessKey: 'LqeWfspi6WB2F3fi1Vv5Y1'
-    , uploadToCloud: true
+    , uploadToCloud: false
     , cloudConfig: { host: 'localhost', port: 3000 }
 };
 
@@ -48,6 +48,7 @@ settings.cloudConfig.port = 80;
 
 if (settings.isLocal) {
     // do configs from file
+    console.log('running locally')
     if (config.datafile) { settings.datafile = config.datafile; }
     if (config.port) { settings.port = config.port; }
     if (config.useTod) { settings.useTod = config.useTod; }
@@ -55,6 +56,11 @@ if (settings.isLocal) {
     if (config.allowFunInOverall) { settings.allowFunInOverall = config.allowFunInOverall; }
     if (config.useSuperClassing) { settings.useSuperClassing = config.useSuperClassing; }
     if (config.secondsPerCone) { settings.secondsPerCone = config.secondsPerCone; }
+
+    if (!fs.existsSync('./data.json')){
+        console.log('data.json does not exist, creating it now.')
+        fs.writeFileSync('./data.json', '{}');
+    }
 } else {
     settings.port = 80;
 
@@ -82,7 +88,9 @@ app.get('/stats', function (req, res) {
     html.push('<p>Last Updated: ' + settings.lastpoll + '</p>');
     html.push('<p>Run Count: ' + data.runs.length + '</p>');
     html.push('<p>Drivers: ' + data.drivers.length + '</p>');
-
+    html.push('<p>Super Classing?: ' + settings.useSuperClassing + '</p>');
+    html.push('<p>allowFunInOverall?: ' + settings.allowFunInOverall + '</p>');
+    
     html.push('</body></html>');
 
     res.send(html.join(''));
@@ -145,6 +153,10 @@ app.get('/driverdata', function (req, res) {
     res.send({ driver: driver, runs: truns, lastupdated:data.poller.lastpoll.formatDate('HH:mm:ss'), runcount:data.runs.length });
 });
 
+app.get('/reloadCloud', function (req, res) {
+    reloadCloud();
+    res.send('did it. ' + (new Date()));
+});
 
 app.get('/', function (req, res) {
     if (settings.isLocal) {
@@ -285,6 +297,7 @@ if (settings.isLocal) {
                     //sendIt(sendCfg);
                     uploadQueue.push(sendCfg);
                     doQueue();
+                    console.log('Add to cloud queue' + uploadQueue.length);
                 }
 
                 for (var i = (runCount < 21 ? 0 : (runCount - 21)) ; i < runCount; i++) {
@@ -352,6 +365,18 @@ function doQueue() {
         var q = uploadQueue[0];
         sendIt(q);
     }
+}
+
+function reloadCloud() {
+    console.log('Reload Cloud data');
+    var sendCfg = { drivers: [], runs: [], reload: true, useSuperClassing: settings.useSuperClassing, date: new Date().formatDate('MM/dd/yyyy'), lastpoll: data.poller.lastpoll.formatDate('HH:mm:ss'), runcount: data.runs.length };
+
+    sendCfg.reload = true;
+    sendCfg.runs = data.runs;
+    sendCfg.drivers = data.drivers;
+
+    uploadQueue.push(sendCfg);
+    doQueue();
 }
 
 function sendIt(dat) {
